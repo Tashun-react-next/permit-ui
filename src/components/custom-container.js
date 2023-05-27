@@ -3,15 +3,19 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import {from, map, merge, Subject} from "rxjs";
+
 import {
+    AppChainId,
     checkIfWalletIsConnected,
     connectWallet,
     ContractAddress,
-    msgParams,
+    msgParams, RCP_URL,
     SpenderAddress
 } from "../utils/general-utils";
 import {useEffect, useState} from "react";
 import {ethers} from "ethers";
+import {PopupModal} from "./popup-modal";
 
 // import sigUtils from "@metamask/eth-sig-util/dist/utils";
 
@@ -20,15 +24,83 @@ function CustomContainer() {
     const [error, setError] = useState("");
     const [isConnected, setConnected] = useState(false);
     const [account, setSelectedAccount] = useState();
-    const [value, setValue] = useState(0);
+    const [value, setValue] = useState(1000);
     const [isLoading, setLoading] = useState(false);
     const [timeStamp, setTimeStamp] = useState(0);
+    const [chainId, setChainId] = useState("0");
+    const [isOnValidNetwork, setOnValidNetwork] = useState(true);
 
 
     useEffect(() => {
         // setProcessing(true);
         checkIfWalletIsConnected(setError, setConnected, setSelectedAccount);
+        getChainIds(setChainId).then();
+
     }, []);
+    useEffect(() => {
+        getChainIds(setChainId).then();
+        if (window.ethereum) {
+            window.ethereum.on("chainChanged", () => {
+                window.location.reload();
+                // switchNetwork();
+            });
+
+            window.ethereum.on("accountsChanged", () => {
+                window.location.reload();
+            });
+        }
+    }, [account]);
+
+    useEffect(() => {
+        if (chainId !== "0") {
+            console.log(AppChainId?.toLowerCase());
+            console.log(chainId?.toLowerCase());
+            console.log(chainId?.toLowerCase() === AppChainId?.toLowerCase());
+            setOnValidNetwork(chainId?.toLowerCase() === AppChainId?.toLowerCase());
+            setLoading(false);
+        }
+    }, [chainId]);
+
+    const getChainIds = async (setChainId) => {
+        setChainId(await window.ethereum?.request({method: 'eth_chainId'}))
+
+    }
+    const getEthereumFromWindow = (setError) => {
+        const {ethereum} = window;
+        if (!ethereum) {
+            setError("MetaMask is not installed. Please consider installing it: https://metamask.io/download.html");
+        }
+        return ethereum;
+    }
+
+    const switchNetwork = (setError) => {
+        const ethereum = getEthereumFromWindow(setError);
+        try {
+            // check if the chain to connect to is installed
+            ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{chainId: AppChainId}],
+            });
+        } catch (error) {
+            if (error.code === 4902) {
+                try {
+                    ethereum.request({
+                        method: "wallet_addEthereumChain",
+                        params: [
+                            {
+                                chainId: AppChainId,
+                                rpcUrl: RCP_URL,
+                            },
+                        ],
+                    });
+                } catch (addError) {
+                    setError(addError);
+                }
+            }
+            setError(error);
+        }
+
+    };
 
 
     const handleClick = async () => {
@@ -66,7 +138,6 @@ function CustomContainer() {
         setLoading(false);
 
 
-
         wait().then(() => {
             setLoading(false);
         });
@@ -89,51 +160,72 @@ function CustomContainer() {
 
 
     return (
-        <Container>
-            <Row>
-                <Col>Owner</Col>
-                <Col
-                    xs={6}>{account ? account.toString().substring(0, 8) + "......." + account.toString().substring(35, 42) :
-                    <Button
-                        onClick={() =>connectWallet(setError, setConnected, setSelectedAccount)}
-                    >
-                        Connect Wallet
-                    </Button>}</Col>
-            </Row>
+        <>
+            {isOnValidNetwork && !isLoading && <Container>
 
-            <Row>
-                <Col>Spender</Col>
-                <Col
-                    xs={6}>{ContractAddress.toString().substring(0, 8) + "......." + ContractAddress.toString().substring(35, 42)}</Col>
-            </Row>
+                <Row>
+                    <Col>Owner</Col>
+                    <Col
+                        xs={6}>{account ? account.toString().substring(0, 8) + "......." + account.toString().substring(35, 42) :
+                        <Button
+                            onClick={() => connectWallet(setError, setConnected, setSelectedAccount)}
+                        >
+                            Connect Wallet
+                        </Button>}</Col>
+                </Row>
 
-            <Row>
-                <Col>value</Col>
-                <Col xs={6}>
-                    {/*<input*/}
-                    {/*    type="text"*/}
-                    {/*    onChange={setValue}*/}
-                    {/*>*/}
-                    1000
+                <Row>
+                    <Col>Spender</Col>
+                    <Col
+                        xs={6}>{ContractAddress.toString().substring(0, 8) + "......." + ContractAddress.toString().substring(35, 42)}</Col>
+                </Row>
 
-                    {/*</input>*/}
-                </Col>
-            </Row>
+                <Row>
+                    <Col>value</Col>
+                    <Col xs={6}>
+                        {/*<input*/}
+                        {/*    type="text"*/}
+                        {/*    onChange={setValue}*/}
+                        {/*>*/}
+                        1000
+
+                        {/*</input>*/}
+                    </Col>
+                </Row>
 
 
-            <Row>
-                <Col>
-                    <Button variant="primary" size="lg"
-                            disabled={isLoading || !value}
-                            onClick={!isLoading ? handleClick : null}
-                    >
-                        Permit
-                    </Button>
-                </Col>
+                <Row>
+                    <Col>
+                        <Button variant="primary" size="lg"
+                                disabled={isLoading || !value}
+                                onClick={!isLoading ? handleClick : null}
+                        >
+                            Permit
+                        </Button>
+                    </Col>
 
-            </Row>
-        </Container>
+                </Row>
+
+
+            </Container>}
+            {!isOnValidNetwork && !isLoading && (
+                <div>
+                    <PopupModal
+                        defaultValue="SHOW"
+                        hideButton={true}
+                        description="Change the Network to Sepolia"
+                        title="Invalid Network!!"
+                        saveButtonName={"Change Network"}
+                        setError={setError}
+                        func={() => switchNetwork(setError)}
+                    />
+
+                    <p>Please change to a Sepolia Network</p>
+                </div>
+            )}
+        </>
     );
+
 }
 
 function wait() {

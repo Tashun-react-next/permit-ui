@@ -2,14 +2,14 @@ import {BigNumber, ethers} from "ethers";
 import {from, map, merge, Subject} from "rxjs";
 
 
-export const AppChainId = "0x13881";
+export const AppChainId = "0xAA36A7";
 // export const ContractAddress = "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853";
 export const ContractAddress = "0x1DBf65138637185cD9D11a81B10005A1Dbf00AD5";
 // export const ContractAddress = "0x0442Cd51bDb95499bf0c089Bb065452C222376b5";
 // export const ContractAddress = "0xa5d8f2c1e79b495120426cb12f23c9f89db94f8e";
 // export const SpenderAddress = "0x5C0122Eb7AE6F776E63A1294c1dd0d66FB221F6e";
 export const SpenderAddress = "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853";
-export const RCP_URL = "https://rpc-mumbai.maticvigil.com"; // rpcUrl: 'https://matic-mumbai.chainstacklabs.com',
+export const RCP_URL = "https://matic-mumbai.chainstacklabs.com"; // rpcUrl: 'https://matic-mumbai.chainstacklabs.com',
 
 
 export const getShortenedAccountNumber = (accountAddress) => {
